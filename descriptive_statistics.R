@@ -7,7 +7,7 @@
 # =============================================================================
 
 #set working directory
-setwd('C:/Users/Michèle/Dropbox/Master/MA/05_DataAnalysis')
+setwd('C:/Users/Michèle/Dropbox/Master/MA/06_MA_Files/MA_RCode')
 #setwd('C:/Users/Helena Aebersold/Dropbox/Michele_MA/05_ClusterAnalysis')
 
 #source cleaned data
