@@ -203,18 +203,18 @@ sapply(data, function(y) sum(length(which(is.na(y)))))
 data <- subset(data, TOBud !=0 & 
                  BudMSTot <= 100 & BudMETot <= 100 & BudPATot <= 100 & BudISTot <= 100 & 
                  BudMSTot >= 0 & BudMETot >= 0 & BudPATot >= 0 & BudISTot >= 0 &
-                 DB1Bud >0 & DB1Bud < 100 &
+                 DB1Bud >0 & DB1Bud <100 &
                  DB1Act <100 &
-                 SUCostTO <=0 &
-                 CostActBudRel > -100 &CostActBudMSRel > -100 & CostActBudMERel > -100 &
+                 CostActBudRel > -100 & CostActBudMSRel > -100 & CostActBudMERel > -100 &
                  CostActBudPARel > -100 & CostActBudISRel > -100 &
                  CostMostnegFCadjMS >=0 & CostMostnegFCadjME >=0 &
                  HOMYellCost >=0 & HOMYellQual >=0 & HOMYellTime >=0 &
                  HOMRedCost >=0 & HOMRedQual >=0 & HOMRedTime >=0 &
-                 BAImportPr >=0 & BUImportPr >=0 & MSImportPr >=0 &
+                 BAImportPr >0 & BUImportPr >0 & MSImportPr >0 &
                  PrTimeBase >0 & PrTimeAct > 0 &
-                 PMAge2 >=0 & PMTen2 >=0 &
-                 NoLeadSASFF >=0 &
+                 NoPM >0 &
+                 PMAge2 >0 & PMTen2 >=0 &
+                 NoLeadSASFF >0 &
                  NoSupplSAS >=0 & NoSupplSASMS >=0 &  NoSupplSASME >=0 & NoSupplSASPA >=0 & NoSupplSASIS >=0 &
                  NoContr >0 &
                  DB1Budabs >0)
@@ -240,15 +240,15 @@ names <- colnames(outlier)
 #calculate items for outlier analysis
 min <- round(as.numeric(lapply(outlier, min)),2)
 Q1 <- round(as.numeric(lapply(outlier, quantile, probs = 0.25)),2)
-means <- round(as.numeric(colMeans(data[,nums]),2))
+means <- round(as.numeric(colMeans(outlier),2))
 median <- round(as.numeric(lapply(outlier, quantile, probs = 0.5)),2)
 Q3 <- round(as.numeric(lapply(outlier, quantile, probs = 0.75)),2)
 max <- round(as.numeric(lapply(outlier, max)),2)
 iqr <- as.numeric(Q3-Q1)
-iqr1_5_min <- as.numeric(iqr - 1.5*iqr)
-iqr1_5_max <- as.numeric(iqr + 1.5*iqr)
-iqr3_min <- as.numeric(iqr - 3*iqr)
-iqr3_max <- as.numeric(iqr + 3*iqr)
+iqr1_5_min <- as.numeric(Q1 - 1.5*iqr)
+iqr1_5_max <- as.numeric(Q3 + 1.5*iqr)
+iqr3_min <- as.numeric(Q1 - 3*iqr)
+iqr3_max <- as.numeric(Q3 + 3*iqr)
 outlier_xlsx <- data.frame(var = colnames(outlier), min, Q1, means, median, Q3, max, iqr,
                            iqr1_5_min, min<iqr1_5_min,
                            iqr1_5_max, max > iqr1_5_max,
@@ -261,12 +261,12 @@ colnames(outlier_xlsx) <- c("nums","Min","Q1","Mean","Median", "Q3", "Max","iqr"
 
 #write xlsx for outlier
 write.xlsx(outlier_xlsx, "outlier.xlsx")
+write.xlsx(data, "data.xlsx")
 
 #delete outliers
 
-d <- subset(data, DB1Act >= -28.16 & DB1Act <=56.32 &
-              CostActBudRel <= 260.2 & CostActBudMSRel <= 302.42 & CostActBudMERel <= 5714.12 &
-              CostActBudPARel <= 2923.61 & CostActBudISRel <=3271.3 &
+d <- subset(data, DB1Bud >=5 & DB1Act >= -19.34 & DB1Act <=78.94 &
+              CostActBudPARel <= 125227.05 & CostActBudISRel <=50300 &
               BAImportPr <=8550.0548895899)
 
 CostAct <- d$TOAct-d$DB1Actabs
