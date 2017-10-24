@@ -272,16 +272,20 @@ d <- subset(data, DB1Bud >=5 & DB1Act >= -19.34 & DB1Act <=78.94 &
 #add further variables
 Success <- d$DB1BudDev>0
 Success_Ampel <- cut(d$DB1BudDev, c(max(d$DB1BudDev), -4, -10, min(d$DB1BudDev)), labels = c("green", "yellow", "red"))
-Delay <
+Delay <- d$PrTimeDelay>0 #no difference if i use Ample System
+TOBud_Cat <- cut(d$TOBud, c(min(d$TOBud), seq(1000,30000, 500), max(d$TOBud)))
 TOBudDevabs <- as.numeric(d$TOAct-d$TOBud)
 DB1BudDevabs <- as.numeric(d$DB1Actabs-d$DB1Budabs)
 CostAct <- as.numeric(d$TOAct-d$DB1Actabs)
 CostBud <- as.numeric(d$TOBud-d$DB1Budabs)
-PrEndDate <- as.mondate(d$PrStartDate) + d$PrTimeAct
+#PrEndDate <- as.mondate(as.Date(d$PrStartDate)) + d$PrTimeAct
 
-d <- data.frame(d, Success, TOBudDevabs, DB1BudDevabs, CostAct, CostBud, PrEndDate)
+d <- data.frame(d, Success, Succes_Ampel, Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostAct, CostBud)
 
+#write final data to xlsx
+write.xlsx(d, "03_d.xlsx")
 
+#make two data sets for further anaylzing
 uBud <- subset(d, DB1BudDev < 0)
 oBud <- subset(d, DB1BudDev >=0)
 
