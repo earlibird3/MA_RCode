@@ -21,7 +21,7 @@ setwd('C:/Users/Michèle/Dropbox/Master/MA/06_MA_Files/MA_RCode')
 #storage C:\Users\Michèle\Appdata_raw\Local\Temp\RtmpQxfK53\downloaded_packages
 if (!require("pacman")) install.packages("pacman")
 #p_load: wraps library and require into one function, it checks if a package is installed, if not it installs the package
-pacman::p_load("ggplot2", "xlsx", "rJava", "xlsxjars", "reshape", "vars", "MuMIn", "tidyr", "plyr", "gridExtra")
+pacman::p_load("ggplot2", "xlsx", "rJava", "xlsxjars", "reshape", "vars", "MuMIn", "tidyr", "plyr", "gridExtra", "mondate")
 
 
 
@@ -84,9 +84,10 @@ data_raw$AMAge <- NULL
 data_raw$AMTen <- NULL
 
 
-#summary data_raw_raw
-s <- summary(data_raw)
-capture.output(s, file = "s_data_raw.txt")
+#write data_raw to excle
+write.xlsx(data_raw, "01_data_raw_Ro.xlsx")
+
+
 
 ###############################################################################
 # ============================================================================
@@ -261,17 +262,25 @@ colnames(outlier_xlsx) <- c("nums","Min","Q1","Mean","Median", "Q3", "Max","iqr"
 
 #write xlsx for outlier
 write.xlsx(outlier_xlsx, "outlier.xlsx")
-write.xlsx(data, "data.xlsx")
+write.xlsx(data, "02_data_Ro.xlsx")
 
 #delete outliers
 
 d <- subset(data, DB1Bud >=5 & DB1Act >= -19.34 & DB1Act <=78.94 &
-              CostActBudPARel <= 125227.05 & CostActBudISRel <=50300 &
-              BAImportPr <=8550.0548895899)
+              CostActBudPARel < 664259.5 & CostActBudISRel < 902779.17 )
 
-CostAct <- d$TOAct-d$DB1Actabs
-CostBud <- d$TOBud-d$DB1Budabs
-d <- data.frame(d, CostAct, CostBud)
+#add further variables
+Success <- d$DB1BudDev>0
+Success_Ampel <- cut(d$DB1BudDev, c(max(d$DB1BudDev), -4, -10, min(d$DB1BudDev)), labels = c("green", "yellow", "red"))
+Delay <
+TOBudDevabs <- as.numeric(d$TOAct-d$TOBud)
+DB1BudDevabs <- as.numeric(d$DB1Actabs-d$DB1Budabs)
+CostAct <- as.numeric(d$TOAct-d$DB1Actabs)
+CostBud <- as.numeric(d$TOBud-d$DB1Budabs)
+PrEndDate <- as.mondate(d$PrStartDate) + d$PrTimeAct
+
+d <- data.frame(d, Success, TOBudDevabs, DB1BudDevabs, CostAct, CostBud, PrEndDate)
+
 
 uBud <- subset(d, DB1BudDev < 0)
 oBud <- subset(d, DB1BudDev >=0)
