@@ -21,7 +21,8 @@ setwd('C:/Users/Michèle/Dropbox/Master/MA/06_MA_Files/MA_RCode')
 #storage C:\Users\Michèle\Appdata_raw\Local\Temp\RtmpQxfK53\downloaded_packages
 if (!require("pacman")) install.packages("pacman")
 #p_load: wraps library and require into one function, it checks if a package is installed, if not it installs the package
-pacman::p_load("ggplot2", "xlsx", "rJava", "xlsxjars", "reshape", "vars", "MuMIn", "tidyr", "plyr", "gridExtra", "mondate")
+pacman::p_load("ggplot2", "xlsx", "rJava", "xlsxjars", "reshape", "vars", "MuMIn", "tidyr", "plyr", "gridExtra",
+              "lubridate")
 
 
 
@@ -200,6 +201,11 @@ sapply(data, function(y) sum(length(which(is.na(y)))))
 #NoContr >0, on minimum one contract
 #DB1Budabs > 0, projects must have costs
 
+#Set Var NULL, da Verdacht auf nicht korrekte Berechnung
+data$BAImportPr <- NULL #es kann nicht 100% sichergestellt werden, dass diese Variable korrekt berechnet wurde
+data$BUImportPr <- NULL #es kann nicht 100% sichergestellt werden, dass diese Variable korrekt berechnet wurde
+data$MSImportPr <- NULL #es kann nicht 100% sichergestellt werden, dass diese Variable korrekt berechnet wurde
+
 #subset data according plausibility indication above
 data <- subset(data, TOBud !=0 & 
                  BudMSTot <= 100 & BudMETot <= 100 & BudPATot <= 100 & BudISTot <= 100 & 
@@ -211,7 +217,6 @@ data <- subset(data, TOBud !=0 &
                  CostMostnegFCadjMS >=0 & CostMostnegFCadjME >=0 &
                  HOMYellCost >=0 & HOMYellQual >=0 & HOMYellTime >=0 &
                  HOMRedCost >=0 & HOMRedQual >=0 & HOMRedTime >=0 &
-                 BAImportPr >0 & BUImportPr >0 & MSImportPr >0 &
                  PrTimeBase >0 & PrTimeAct > 0 &
                  NoPM >0 &
                  PMAge2 >0 & PMTen2 >=0 &
@@ -266,24 +271,30 @@ write.xlsx(data, "02_data_Ro.xlsx")
 
 #delete outliers
 
-d <- subset(data, DB1Bud >=5 & DB1Act >= -19.34 & DB1Act <=78.94 &
+d <- subset(data, DB1Act >= -19.39 & DB1Act <=78.89 &
               CostActBudPARel < 664259.5 & CostActBudISRel < 902779.17 )
 
 #add further variables
-Success <- d$DB1BudDev>0
-Success_Ampel <- cut(d$DB1BudDev, c(max(d$DB1BudDev), -4, -10, min(d$DB1BudDev)), labels = c("green", "yellow", "red"))
-Delay <- d$PrTimeDelay>0 #no difference if i use Ample System
-TOBud_Cat <- cut(d$TOBud, c(min(d$TOBud), seq(1000,30000, 500), max(d$TOBud)))
+Success <- d$DB1BudDev>=0
+Success_Ampel <- cut(d$DB1BudDev, c(min(d$DB1BudDev), -10, -4, max(d$DB1BudDev)),
+                     labels = c("green", "yellow", "red"), include.lowest = T)
+Delay <- d$PrTimeDelay>=0 #no difference if i use Ample System
+TOBud_Cat <- cut(d$TOBud, c(min(d$TOBud), seq(500,5000, 500), 10000, max(d$TOBud)+1), right = F)
 TOBudDevabs <- as.numeric(d$TOAct-d$TOBud)
 DB1BudDevabs <- as.numeric(d$DB1Actabs-d$DB1Budabs)
-CostAct <- as.numeric(d$TOAct-d$DB1Actabs)
-CostBud <- as.numeric(d$TOBud-d$DB1Budabs)
-#PrEndDate <- as.mondate(as.Date(d$PrStartDate)) + d$PrTimeAct
+CostAct <- as.numeric((-1)*(d$TOAct-d$DB1Actabs))
+CostBud <- as.numeric((-1)*(d$TOBud-d$DB1Budabs))
+#format PrStartDate as date
+d$PrStartDate <- as.Date(d$PrStartDate, format = "%d.%m.%Y")
+#startd <-d$PrStartDate #hilfsvektor to estimate PrEndDate
+#mPrTime <- month(d$PrTimeAct) #hilfsvektor to estimat PrEndDate
+#PrEndDate <- startd + mPrTime
 
-d <- data.frame(d, Success, Succes_Ampel, Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostAct, CostBud)
+d <- data.frame(d, Success, Success_Ampel, Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostAct, CostBud)
 
 #write final data to xlsx
-write.xlsx(d, "03_d.xlsx")
+write.xlsx(d, "03_d_o.xlsx")
+
 
 #make two data sets for further anaylzing
 uBud <- subset(d, DB1BudDev < 0)
