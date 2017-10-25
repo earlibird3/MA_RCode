@@ -14,7 +14,7 @@
 ###############################################################################
 
 #set working directory
-setwd('C:/Users/Michèle/Dropbox/Master/MA/06_MA_Files/MA_RCode')
+#setwd('C:/Users/Michèle/Dropbox/Master/MA/06_MA_Files/MA_RCode')
 #setwd('C:/Users/Helena Aebersold/Dropbox/Michele_MA/05_ClusterAnalysis')
 
 #install packagae 'pacman' in order to install all packages which have not been installed yet
@@ -270,14 +270,15 @@ write.xlsx(outlier_xlsx, "outlier.xlsx")
 write.xlsx(data, "02_data_Ro.xlsx")
 
 #delete outliers
-
 d <- subset(data, DB1Act >= -19.39 & DB1Act <=78.89 &
               CostActBudPARel < 664259.5 & CostActBudISRel < 902779.17 )
 
-#add further variables
+#create variables
 Success <- d$DB1BudDev>=0
 Success_Ampel <- cut(d$DB1BudDev, c(min(d$DB1BudDev), -10, -4, max(d$DB1BudDev)),
                      labels = c("green", "yellow", "red"), include.lowest = T)
+Dummy_Success <- as.numeric(d$DB1BudDev>=0)
+Dummy_Fail <- as.numeric(d$DB1BudDev<0)
 Delay <- d$PrTimeDelay>=0 #no difference if i use Ample System
 TOBud_Cat <- cut(d$TOBud, c(min(d$TOBud), seq(500,5000, 500), 10000, max(d$TOBud)+1), right = F)
 TOBudDevabs <- as.numeric(d$TOAct-d$TOBud)
@@ -290,7 +291,16 @@ d$PrStartDate <- as.Date(d$PrStartDate, format = "%d.%m.%Y")
 #mPrTime <- month(d$PrTimeAct) #hilfsvektor to estimat PrEndDate
 #PrEndDate <- startd + mPrTime
 
-d <- data.frame(d, Success, Success_Ampel, Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostAct, CostBud)
+#add variables to data d
+d <- data.frame(d, Success = Success, Success_Ampel, Dummy_Success, Dummy_Fail, 
+                Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostAct, CostBud,
+                stringsAsFactors = F)
+
+#format all logical und factors data as character
+d$Success <- as.character(d$Success)
+d$Success_Ampel <- as.character(d$Success_Ampel)
+d$Delay <- as.character(d$Delay)
+
 
 #write final data to xlsx
 write.xlsx(d, "03_d_o.xlsx")

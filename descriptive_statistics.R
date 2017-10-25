@@ -13,13 +13,26 @@ setwd('C:/Users/Michèle/Dropbox/Master/MA/06_MA_Files/MA_RCode')
 #source cleaned data
 source("./data_cleaning.R")
 
+
 ###############################################################################
 # =============================================================================
-# Identify Loss
+# 1. Data Overview
 # =============================================================================
 ###############################################################################
 
-x <- oBud
+
+
+
+#calculate successful and not successfull projects per Region and BA
+
+frequency <- count(d,c("Success", "Region", "BA"))
+aggregate(freq ~ Success + Region + BA, frequency, sum)
+
+
+#calculate loss projects per Region and BA
+
+aggregate(cbind(TOBud, CostBud, DB1Budabs, TOAct, CostAct, DB1Actabs,
+                CostActBudMSabs, CostActBudMEabs, CostActBudPAabs, CostActBudISabs) ~ Success, data = d, sum)
 
 lossx <- x[,c("TOBud", "CostBud", "DB1Budabs", "TOAct","CostAct","DB1Actabs",
           "CostActBudMSabs", "CostActBudMEabs", "CostActBudPAabs", "CostActBudISabs")]
