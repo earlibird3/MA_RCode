@@ -26,24 +26,34 @@ source("./data_cleaning.R")
 #calculate successful and not successfull projects per Region and BA
 
 frequency <- count(d,c("Success", "Region", "BA"))
-aggregate(freq ~ Success + Region + BA, frequency, sum)
+e_success <- aggregate(cbind(Dummy_Fail,Dummy_Success) ~ Region + BA, d, sum)
+Total <- as.numeric(e_success$Dummy_Fail+e_success$Dummy_Success)
+e_success <- data.frame(e_success, Total,
+                       Success_Per = e_success$Dummy_Success/Total, Fail_Per = e_success$Dummy_Fail/Total,
+                       Success_Fail = e_success$Dummy_Success/e_success$Dummy_Fail)
+order("North_Ame", "South_Ame", "EU","MEA_Afr","South_Asia","SAS_BCHI","East_Asia")
+
 
 
 #calculate loss projects per Region and BA
 
-aggregate(cbind(TOBud, CostBud, DB1Budabs, TOAct, CostAct, DB1Actabs,
+e_loss <- aggregate(cbind(TOBud, CostBud, DB1Budabs, TOAct, CostAct, DB1Actabs,
                 CostActBudMSabs, CostActBudMEabs, CostActBudPAabs, CostActBudISabs) ~ Success, data = d, sum)
+e_loss_reg_ba <- aggregate(cbind(TOBud, CostBud, DB1Budabs, TOAct, CostAct, DB1Actabs,
+                          CostActBudMSabs, CostActBudMEabs, CostActBudPAabs, CostActBudISabs) ~ Success + Region + BA, data = d, sum)
 
-lossx <- x[,c("TOBud", "CostBud", "DB1Budabs", "TOAct","CostAct","DB1Actabs",
-          "CostActBudMSabs", "CostActBudMEabs", "CostActBudPAabs", "CostActBudISabs")]
-write.xlsx(lossx,"lossx.xlsx")
-sapply(lossx, sum)
+wb = createWorkbook()
+sheet = createSheet(wb, sheetName = "ov_success")
+addDataFrame(e_success, sheet = sheet, row.names = F)
+sheet = createSheet(wb, sheetName = "ov_loss")
+addDataFrame(e_loss, sheet = sheet, row.names = F)
+sheet = createSheet(wb, sheetName = "ov_loss_reg_ba")
+addDataFrame(e_loss_reg_ba, sheet = sheet, row.names = F)
+saveWorkbook(wb, "Evaluation.xlsx")
 
-y <- uBud
 
-lossy <- y[,c("TOBud", "CostBud", "DB1Budabs", "TOAct","CostAct","DB1Actabs",
-              "CostActBudMSabs", "CostActBudMEabs", "CostActBudPAabs", "CostActBudISabs")]
-sapply(lossy, sum)
+
+
 
 
 
