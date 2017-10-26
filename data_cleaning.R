@@ -115,7 +115,7 @@ data_raw$Medianofavg.BAprojectb <- NULL
 data_raw$Medianofavg.BUprojectb <- NULL
 data_raw$Medianofavg.MSprojectb <- NULL
 data_raw$ORDate <- NULL #is same as HOM, not used in analysis
-data_raw$BPMID <- NULL #only identifies project, not used in analysis
+#data_raw$BPMID <- NULL #only identifies project, not used in analysis -> used for checking data
 data_raw$CuName <- NULL #Customer can be identified by its identification number, name not used
 data_raw$PM <- NULL #PM and AM can be identified by its User ID, name not used
 data_raw$AM <- NULL
@@ -275,13 +275,17 @@ d <- subset(data, DB1Act >= -19.39 & DB1Act <=78.89 &
 
 #create variables
 Success <- d$DB1BudDev>=0
-Success_Ampel <- cut(d$DB1BudDev, c(min(d$DB1BudDev), -10, -4, max(d$DB1BudDev)),
-                     labels = c("green", "yellow", "red"), include.lowest = T)
 Dummy_Success <- as.numeric(d$DB1BudDev>=0)
 Dummy_Fail <- as.numeric(d$DB1BudDev<0)
+Success_Ampel <- cut(d$DB1BudDev, c(min(d$DB1BudDev), -10, -4, max(d$DB1BudDev)),
+                     labels = c("red", "yellow", "green"), include.lowest = T)
+Dummy_green <- as.numeric(d$DB1BudDev > -4)
+Dummy_yell <- as.numeric(d$DB1BudDev <= -4 & d$DB1BudDev > -10)
+Dummy_red <- as.numeric(d$DB1BudDev <= -10)
 Delay <- d$PrTimeDelay>=0 #no difference if i use Ample System
 TOBud_Cat <- cut(d$TOBud, c(min(d$TOBud), seq(500,5000, 500), 10000, max(d$TOBud)+1), right = F)
 TOBudDevabs <- as.numeric(d$TOAct-d$TOBud)
+CostBudDevabs <- as.numeric(d$CostAct-d$CostBud)
 DB1BudDevabs <- as.numeric(d$DB1Actabs-d$DB1Budabs)
 CostAct <- as.numeric((-1)*(d$TOAct-d$DB1Actabs))
 CostBud <- as.numeric((-1)*(d$TOBud-d$DB1Budabs))
@@ -292,8 +296,9 @@ d$PrStartDate <- as.Date(d$PrStartDate, format = "%d.%m.%Y")
 #PrEndDate <- startd + mPrTime
 
 #add variables to data d
-d <- data.frame(d, Success = Success, Success_Ampel, Dummy_Success, Dummy_Fail, 
-                Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostAct, CostBud,
+d <- data.frame(d, Success = Success, Dummy_Success, Dummy_Fail,Success_Ampel,
+                Dummy_green, Dummy_yell, Dummy_red,
+                Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostBudDevabs, CostAct, CostBud,
                 stringsAsFactors = F)
 
 #format all logical und factors data as character
