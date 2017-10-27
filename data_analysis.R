@@ -21,7 +21,9 @@ source("./data_cleaning.R")
 ###############################################################################
 
 #calculate absolut frequency of Success and Fail pro Region und BA
-e_freq <- aggregate(cbind(Dummy_Fail,Dummy_Success) ~ Region + BA + BU + MS + CuNo, d, sum)
+e_freq <- aggregate(cbind(Dummy_Fail,Dummy_Success) ~ Region + BA + BU + MS + CuNo +
+                      PMNo + PMChange + LeadSASPr + LeadSAS.PrFF+ CostFCadj + CostFCadjMS+
+                      CostFCadjME + CostFCadjPA+CostFCadjIS + NoPM NoLeadSASFF, d, sum)
 Total <- as.numeric(e_freq$Dummy_Fail+e_freq$Dummy_Success)
 e_freq <- data.frame(e_freq, Total,
                        Success_Per = e_freq$Dummy_Success/Total, Fail_Per = e_freq$Dummy_Fail/Total,
@@ -76,14 +78,32 @@ saveWorkbook(wb, "Evaluation.xlsx")
 # 2. Fulfillment
 # =============================================================================
 ###############################################################################
+
 #create vector for all ff variables which are numeric
 ff_num <- c("CostMostnegFCajdMS", "CostMostnegFCajdME", "HOMYellCost", "HOMYellQual", "HOMYellTime",
             "HOMRedCost", "HOMRedTime", "HOMRedQual", "NoPM", "PMAge2", "PMTen2", "NoLeadSASFF")
 #create vector for all ff variables which are categorical w/o PMNo as this could give a separate analysis
 ff_char <- c("PMChange","LeadSASPr", "LeadSAS.PrFF",
-             "CostFCadj", "CostFCadjMS", "CostFCadjME", "CostFCadjPA", "CostFCajdIS")
+             "CostFCadj", "CostFCadjMS", "CostFCadjME", "CostFCadjPA", "CostFCadjIS")
 
+#create log format of data to iterate through d to crate graphs
+dlong <- melt(d, id.vars = c("BPMID","DB1BudDev", "EquLoc", "PMNo", "PMChange",
+                             "BA", "BU", "MS", "Region", "CuNo", "PrStartDate",
+                             "LeadSASPr","LeadSAS.PrFF", "ConPart",
+                             "Success", "Success_Ampel", "Delay", "TOBud_Cat"))
 
-dlong <- melt(d, id.vars = c("BPMID","DB1BudDev", "EquLoc", "PMNo", "BA", "BU", "MS", "Region", "CUNo"))
+#test combinations of FC depending on success and Region and BA and write to excel
+costfcadj <- count(d, c("CostFCadjMS", "CostFCadjME", "CostFCadjPA", "CostFCadjIS","Success", "Region", "BA"))
+write.xlsx(costfcadj_reg, "FF-CostFCadjCombi.xlsx")
+
+#check plausibility of CostMostnegFCajd: PrTimeAct has to be higher than months 
+plaus_months <- d$CostMostnegFCadjMS <= d$PrTimeBase #Project Closure Actd > seesm to be not plausible
+
+#HOMStatus
+noyellcost <- d$HOMYellCost == 1111111
+
+#histogram for all ff-num
+ggplot(subset(dlong, variable == "HOMRedCost"), aes(x = value, fill = Success)) +
+  geom_histogram(alpha = 0.5, position = 'identity', bins = 15) +xlim(min(d$HOMRedCost), 300)
 
 

@@ -102,7 +102,7 @@ data_raw$CuNo <- as.character(data_raw$CuNo)
 #read ConPart as logical
 data_raw$ConPart[data_raw$ConPart=='X'] <- TRUE
 data_raw$ConPart[data_raw$ConPart=='#'] <- FALSE
-data_raw$ConPart <- as.logical(data_raw$ConPart)
+data_raw$ConPart <- as.character(data_raw$ConPart) #logical is disturbing melt
 
 #eliminate columns
 data_raw$monthsbetw.HOMand1strcstb <- NULL #calculating vectors
@@ -128,7 +128,7 @@ data_raw$AM <- NULL
 ############################################################################### 
 
 #write new data frame for missing value analysis
-data_cl <- data_raw
+data_cl <-data_raw
 
 
 # "#" is a missing value
@@ -271,7 +271,7 @@ write.xlsx(data, "02_data_Ro.xlsx")
 
 #delete outliers
 d <- subset(data, DB1Act >= -19.39 & DB1Act <=78.89 &
-              CostActBudPARel < 664259.5 & CostActBudISRel < 902779.17 )
+              CostActBudPARel < 664259.5 & CostActBudISRel < 902779.17)
 
 #create variables
 Success <- d$DB1BudDev>=0
@@ -283,12 +283,12 @@ Dummy_green <- as.numeric(d$DB1BudDev > -4)
 Dummy_yell <- as.numeric(d$DB1BudDev <= -4 & d$DB1BudDev > -10)
 Dummy_red <- as.numeric(d$DB1BudDev <= -10)
 Delay <- d$PrTimeDelay>=0 #no difference if i use Ample System
-TOBud_Cat <- cut(d$TOBud, c(min(d$TOBud), seq(500,5000, 500), 10000, max(d$TOBud)+1), right = F)
+TOBud_Cat <- as.character(cut(d$TOBud, c(min(d$TOBud), seq(500,5000, 500), 10000, max(d$TOBud)+1), right = F))
 TOBudDevabs <- as.numeric(d$TOAct-d$TOBud)
-CostBudDevabs <- as.numeric(d$CostAct-d$CostBud)
 DB1BudDevabs <- as.numeric(d$DB1Actabs-d$DB1Budabs)
 CostAct <- as.numeric((-1)*(d$TOAct-d$DB1Actabs))
 CostBud <- as.numeric((-1)*(d$TOBud-d$DB1Budabs))
+CostBudDevabs <- as.numeric(CostAct-CostBud)
 #format PrStartDate as date
 d$PrStartDate <- as.Date(d$PrStartDate, format = "%d.%m.%Y")
 #startd <-d$PrStartDate #hilfsvektor to estimate PrEndDate
