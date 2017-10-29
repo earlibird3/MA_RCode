@@ -107,6 +107,14 @@ ggplot(subset(dlong, variable == "HOMRedCost"), aes(x = value, fill = Success)) 
   geom_histogram(alpha = 0.5, position = 'identity', bins = 15) +xlim(min(d$HOMRedCost), 300)
 
 
+#evaluation of PMAge und PMTen
+Cat_age <- cut(d$PMAge2, seq(20,65,5))
+d <- data.frame(d, Cat_age, stringsAsFactors = F)
+Cat_age <- as.character(d$Cat_age)
+
+ffpm <- aggregate(cbind(Dummy_Success, Dummy_Fail)~PMAge2 + PMTen2+Cat_age, data=d, sum)
+write.xlsx(ffpm, "ffpm.xlsx")
+
 ###############################################################################
 # =============================================================================
 # 3. Cost + Erfolgskriteriumg
@@ -139,13 +147,42 @@ print(plot)
 dev.off()
 
 #calculate mean for successful and not successful projects
-cost_mean <- aggregate(cbind(BudMSTot, BudMETot, BudPATot, BudISTot,
+cost_mean_TOBud_cat <- aggregate(cbind(BudMSTot, BudMETot, BudPATot, BudISTot,
                              CostBudDevabs, CostActBudMSabs, CostActBudMEabs, CostActBudPAabs, CostActBudISabs,
                              CostActBudRel, CostActBudMSRel, CostActBudMERel, CostActBudPARel, CostActBudISRel,
-                             SUCostTO)~Success+Region, data = d, mean)
+                             SUCostTO)~TOBud_Cat+Success, data = d, mean)
 
-write.xlsx(cost_mean, "cost_mean.xlsx")
+cost_mean_success <- aggregate(cbind(BudMSTot, BudMETot, BudPATot, BudISTot,
+                             CostBudDevabs, CostActBudMSabs, CostActBudMEabs, CostActBudPAabs, CostActBudISabs,
+                             CostActBudRel, CostActBudMSRel, CostActBudMERel, CostActBudPARel, CostActBudISRel,
+                             SUCostTO)~Success, data = d, mean)
 
+cost_mean_region <- aggregate(cbind(BudMSTot, BudMETot, BudPATot, BudISTot,
+                             CostBudDevabs, CostActBudMSabs, CostActBudMEabs, CostActBudPAabs, CostActBudISabs,
+                             CostActBudRel, CostActBudMSRel, CostActBudMERel, CostActBudPARel, CostActBudISRel,
+                             SUCostTO)~Success+TOBud_Cat+Region, data = d, mean)
+
+cost_sum_TOBudCat <- aggregate(cbind(CostBudDevabs, CostActBudMSabs, CostActBudMEabs,
+                             CostActBudPAabs, CostActBudISabs,
+                             DeltaLastFCAct, DeltaLastFCActMS, DeltaLastFCActME,
+                             DeltaLastFCActIS, DeltaLastFCActPA)~TOBud_Cat+Success+Region, data = d, sum)
+
+TOBud_Cat_summary <- count(d, c("Success", "TOBud_Cat"))
+
+
+wb = createWorkbook()
+sheet = createSheet(wb, sheetName = "cost_mean_toBudcat")
+addDataFrame(cost_mean_TOBud_cat, sheet = sheet, row.names = F)
+sheet = createSheet(wb, sheetName = "cost_mean_success")
+addDataFrame(cost_mean_success, sheet = sheet, row.names = F)
+sheet = createSheet(wb, sheetName = "cost_mean_region")
+addDataFrame(cost_mean_region, sheet = sheet, row.names = F)
+sheet = createSheet(wb, sheetName = "cost_sum_tobudcat")
+addDataFrame(cost_sum_TOBudCat, sheet = sheet, row.names = F)
+sheet = createSheet(wb, sheetName = "tobudcat_summary")
+addDataFrame(TOBud_Cat_summary, sheet = sheet, row.names = F)
+
+saveWorkbook(wb, "cost.xlsx")
 
 ###############################################################################
 # =============================================================================
