@@ -294,17 +294,19 @@ d$PrStartDate <- as.Date(d$PrStartDate, format = "%d.%m.%Y")
 #startd <-d$PrStartDate #hilfsvektor to estimate PrEndDate
 #mPrTime <- month(d$PrTimeAct) #hilfsvektor to estimat PrEndDate
 #PrEndDate <- startd + mPrTime
+Cat_age <- cut(d$PMAge2, seq(20,65,5))
 
 #add variables to data d
 d <- data.frame(d, Success = Success, Dummy_Success, Dummy_Fail,Success_Ampel,
                 Dummy_green, Dummy_yell, Dummy_red,
-                Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostBudDevabs, CostAct, CostBud,
+                Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostBudDevabs, CostAct, CostBud, Cat_age,
                 stringsAsFactors = F)
 
 #format all logical und factors data as character
 d$Success <- as.character(d$Success)
 d$Success_Ampel <- as.character(d$Success_Ampel)
 d$Delay <- as.character(d$Delay)
+d$Cat_age <- as.character(d$Cat_age)
 
 
 #write final data to xlsx
