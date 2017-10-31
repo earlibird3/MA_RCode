@@ -122,14 +122,12 @@ data_raw$AM <- NULL
 
 
 ###############################################################################
-# ============================================================================
-# Identify missing values & eliminate
+# Plausibility of Variables & Identify missing values & eliminate
 # =============================================================================
 ############################################################################### 
 
 #write new data frame for missing value analysis
 data_cl <-data_raw
-
 
 # "#" is a missing value
 # 9999999: is a missing value
@@ -137,15 +135,33 @@ data_cl <-data_raw
 data_cl[data_cl==9999999] <- NA
 data_cl[data_cl == "#"] <- NA
 
+#Set Var NULL, da Verdacht auf nicht korrekte Berechnung. Prob: some BA do not have a median, which could not be the case
+data_cl$BAImportPr <- NULL #es kann nicht 100% sichergestellt werden, dass diese Variable korrekt berechnet wurde
+data_cl$BUImportPr <- NULL #es kann nicht 100% sichergestellt werden, dass diese Variable korrekt berechnet wurde
+data_cl$MSImportPr <- NULL #es kann nicht 100% sichergestellt werden, dass diese Variable korrekt berechnet wurde
+
+#check plausibility of CostMostnegFCajd: Diff btw. Projct Closure Act und last FC adj. muss <= PrtimeAct in months
+#if higher, FC has been adjusted after Project Closure (NA have to be excluded of test)
+p_monthsnegMS <- data_cl$CostMostnegFCadjMS <= data_cl$PrTimeAct
+p_monthsnegME <- data_cl$CostMostnegFCadjME <= data_cl$PrTimeAct
+p_monthsnegPA <- data_cl$CostMostnegFCadjPA <= data_cl$PrTimeAct
+p_monthsnegIS <- data_cl$CostMostnegFCadjIS <= data_cl$PrTimeAct
+p_monthsfirst <- data_cl$CostFirstadj <= data_cl$PrTimeAct
+
+#plausibility and corretness for this group of factors questioned set NULL
+data_cl$CostMostnegFCadj <- NULL 
+data_cl$CostMostnegFCadjMS <- NULL
+data_cl$CostMostnegFCadjME <- NULL
+data_cl$CostMostnegFCadjPA <- NULL
+data_cl$CostMostnegFCadjIS <- NULL
+data_cl$CostFirstadj <- NULL
 
 #count  NA per column
 na_count <-sapply(data_cl, function(y) sum(length(which(is.na(y)))))
 na_count <- data.frame(na_count)
 write.xlsx(na_count, "na_count.xlsx")
 
-#delete columns with NA's abvoe 300
-data_cl$CostMostnegFCadjIS <- NULL
-data_cl$CostMostnegFCadjPA <- NULL
+#delete columns with NA's abvoe 200
 data_cl$PrTimeDelayMS5 <- NULL
 data_cl$AMAge2 <- NULL #as age and ten cannot be evaluated, there is little sense to evaluate AM as well
 data_cl$AMTen2 <- NULL
@@ -168,10 +184,11 @@ sapply(data, function(y) sum(length(which(is.na(y)))))
 ############################################################################### 
 
 #TOBuD > 0, negative budgets are not plausible
-#BudMSTot: <= 100, when a MS-Project, >= 0, negative percentages (-CostBudMS/-CostBudTot) are not plausible
-#BudMETot: <= 100, when a ME-Project, >= 0, negative percentages (-CostBudME/-CostBudTot) are not plausible
-#BudPATot: <= 100, when a PA-Project, >= 0, negative percentages (-CostBudPA/-CostBudTot) are not plausible
-#BudISTot: <= 100, when a IS-Project, >= 0, negative percentages (-CostBudIS/-CostBudTot) are not plausible
+#WA is 4% and missing in data. Bud has 9 cost compponets of which we only evalute 4
+#BudMSTot: <= 96, when a MS-Project, >= 0, negative percentages (-CostBudMS/-CostBudTot) are not plausible
+#BudMETot: <= 96, when a ME-Project, >= 0, negative percentages (-CostBudME/-CostBudTot) are not plausible
+#BudPATot: <= 96, when a PA-Project, >= 0, negative percentages (-CostBudPA/-CostBudTot) are not plausible
+#BudISTot: <= 96, when a IS-Project, >= 0, negative percentages (-CostBudIS/-CostBudTot) are not plausible
 #DB1Bud: <100 and >0, because projects must have a margin and costs
 #DB1Act: <100 because projects must have some cost parts
 #SUCostTO <0 is a cost element, (-Cost/TO) is always negative 
@@ -201,20 +218,16 @@ sapply(data, function(y) sum(length(which(is.na(y)))))
 #NoContr >0, on minimum one contract
 #DB1Budabs > 0, projects must have costs
 
-#Set Var NULL, da Verdacht auf nicht korrekte Berechnung
-data$BAImportPr <- NULL #es kann nicht 100% sichergestellt werden, dass diese Variable korrekt berechnet wurde
-data$BUImportPr <- NULL #es kann nicht 100% sichergestellt werden, dass diese Variable korrekt berechnet wurde
-data$MSImportPr <- NULL #es kann nicht 100% sichergestellt werden, dass diese Variable korrekt berechnet wurde
+
 
 #subset data according plausibility indication above
 data <- subset(data, TOBud !=0 & 
-                 BudMSTot <= 100 & BudMETot <= 100 & BudPATot <= 100 & BudISTot <= 100 & 
+                 BudMSTot <= 96 & BudMETot <= 96 & BudPATot <= 96 & BudISTot <= 96 &
                  BudMSTot >= 0 & BudMETot >= 0 & BudPATot >= 0 & BudISTot >= 0 &
                  DB1Bud >0 & DB1Bud <100 &
                  DB1Act <100 &
                  CostActBudRel > -100 & CostActBudMSRel > -100 & CostActBudMERel > -100 &
                  CostActBudPARel > -100 & CostActBudISRel > -100 &
-                 CostMostnegFCadjMS >=0 & CostMostnegFCadjME >=0 &
                  HOMYellCost >=0 & HOMYellQual >=0 & HOMYellTime >=0 &
                  HOMRedCost >=0 & HOMRedQual >=0 & HOMRedTime >=0 &
                  PrTimeBase >0 & PrTimeAct > 0 &
@@ -225,8 +238,6 @@ data <- subset(data, TOBud !=0 &
                  NoContr >0 &
                  DB1Budabs >0)
                   
-
-
 
 ###############################################################################
 # ============================================================================
@@ -269,52 +280,8 @@ colnames(outlier_xlsx) <- c("nums","Min","Q1","Mean","Median", "Q3", "Max","iqr"
 write.xlsx(outlier_xlsx, "outlier.xlsx")
 write.xlsx(data, "02_data_Ro.xlsx")
 
-#delete outliers
-d <- subset(data, DB1Act >= -19.39 & DB1Act <=78.89 &
+#exclude outliers
+d <- subset(data, DB1Act >= -18.67 & DB1Act <=78.35 &
               CostActBudPARel < 664259.5 & CostActBudISRel < 902779.17)
-
-#create variables
-Success <- d$DB1BudDev>=0
-Dummy_Success <- as.numeric(d$DB1BudDev>=0)
-Dummy_Fail <- as.numeric(d$DB1BudDev<0)
-Success_Ampel <- cut(d$DB1BudDev, c(min(d$DB1BudDev), -10, -4, max(d$DB1BudDev)),
-                     labels = c("red", "yellow", "green"), include.lowest = T)
-Dummy_green <- as.numeric(d$DB1BudDev > -4)
-Dummy_yell <- as.numeric(d$DB1BudDev <= -4 & d$DB1BudDev > -10)
-Dummy_red <- as.numeric(d$DB1BudDev <= -10)
-Delay <- d$PrTimeDelay>=0 #no difference if i use Ample System
-TOBud_Cat <- as.character(cut(d$TOBud, c(min(d$TOBud), seq(500,5000, 500), 10000, max(d$TOBud)+1), right = F))
-TOBudDevabs <- as.numeric(d$TOAct-d$TOBud)
-DB1BudDevabs <- as.numeric(d$DB1Actabs-d$DB1Budabs)
-CostAct <- as.numeric((-1)*(d$TOAct-d$DB1Actabs))
-CostBud <- as.numeric((-1)*(d$TOBud-d$DB1Budabs))
-CostBudDevabs <- as.numeric(CostAct-CostBud)
-#format PrStartDate as date
-d$PrStartDate <- as.Date(d$PrStartDate, format = "%d.%m.%Y")
-#startd <-d$PrStartDate #hilfsvektor to estimate PrEndDate
-#mPrTime <- month(d$PrTimeAct) #hilfsvektor to estimat PrEndDate
-#PrEndDate <- startd + mPrTime
-Cat_age <- cut(d$PMAge2, seq(20,65,5))
-
-#add variables to data d
-d <- data.frame(d, Success = Success, Dummy_Success, Dummy_Fail,Success_Ampel,
-                Dummy_green, Dummy_yell, Dummy_red,
-                Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostBudDevabs, CostAct, CostBud, Cat_age,
-                stringsAsFactors = F)
-
-#format all logical und factors data as character
-d$Success <- as.character(d$Success)
-d$Success_Ampel <- as.character(d$Success_Ampel)
-d$Delay <- as.character(d$Delay)
-d$Cat_age <- as.character(d$Cat_age)
-
-
-#write final data to xlsx
-write.xlsx(d, "03_d_o.xlsx")
-
-
-#make two data sets for further anaylzing
-uBud <- subset(d, DB1BudDev < 0)
-oBud <- subset(d, DB1BudDev >=0)
 
     
