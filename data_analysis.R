@@ -19,43 +19,31 @@ source("./data_cleaning.R")
 # =============================================================================
 ###############################################################################
 
-
-
-Success <- d$DB1BudDev>=0
-Loss <- d$DB1Act >= 0
-Dummy_Success <- as.numeric(d$DB1BudDev>=0)
-Dummy_Fail <- as.numeric(d$DB1BudDev<0)
-Success_Ampel <- cut(d$DB1BudDev, c(min(d$DB1BudDev), -10, -4, max(d$DB1BudDev)),
-                     labels = c("red", "yellow", "green"), include.lowest = T)
-Dummy_green <- as.numeric(d$DB1BudDev > -4)
-Dummy_yell <- as.numeric(d$DB1BudDev <= -4 & d$DB1BudDev > -10)
-Dummy_red <- as.numeric(d$DB1BudDev <= -10)
-Delay <- d$PrTimeDelay<0 #no difference if i use Ample System
-TOBud_Cat <- as.character(cut(d$TOBud, c(min(d$TOBud), seq(500,5000, 500), 10000, max(d$TOBud)+1), right = F))
-TOBudDevabs <- as.numeric(d$TOAct-d$TOBud)
-DB1BudDevabs <- as.numeric(d$DB1Actabs-d$DB1Budabs)
-CostAct <- as.numeric((-1)*(d$TOAct-d$DB1Actabs))
-CostBud <- as.numeric((-1)*(d$TOBud-d$DB1Budabs))
-CostBudDevabs <- as.numeric(CostAct-CostBud)
+Success <- d$DB1BudDev>=0 #binäre Variable erfolg, nicht-erfolg
+Dummy_Success <- as.numeric(d$DB1BudDev>=0) # dummy success = 1, fail = 0
+Dummy_Fail <- as.numeric(d$DB1BudDev<0) #dummy fail = 1, Successs = 0
+Delay <- d$PrTimeDelay<0 #if deleayd = TRUE, otherwise = FALSE
+TOBud_Cat <- cut(d$TOBud, c(min(d$TOBud), seq(500,5000, 500), 10000, max(d$TOBud)+1), right = F)
+TOBudDevabs <- as.numeric(d$TOAct-d$TOBud) #deviation btw TOAct from TBud in TCHF
+DB1BudDevabs <- as.numeric(d$DB1Actabs-d$DB1Budabs) #deviation btw DB1Act und DB1Bud in TCHF
+CostAct <- as.numeric((-1)*(d$TOAct-d$DB1Actabs)) #Cost Actual
+CostBud <- as.numeric((-1)*(d$TOBud-d$DB1Budabs)) #Cost Bud
+CostBudDevabs <- as.numeric(CostAct-CostBud) #debiation btw. CostAct und CostBud
 d$PrStartDate <- as.Date(d$PrStartDate, format = "%d.%m.%Y")
-Cat_age <- cut(d$PMAge2, seq(20,65,5))
+Cat_age <- cut(d$PMAge2, c(seq(20,60,5), max(d$PMAge2)+1), include.lowest = T)
 
 #add variables to data d
-d <- data.frame(d, Success = Success, Dummy_Success, Dummy_Fail,Success_Ampel,
-                Dummy_green, Dummy_yell, Dummy_red, Loss,
+d <- data.frame(d, Success = Success, Dummy_Success, Dummy_Fail,
                 Delay, TOBud_Cat, TOBudDevabs, DB1BudDevabs, CostBudDevabs, CostAct, CostBud, Cat_age,
                 stringsAsFactors = F)
 
 #format all logical und factors data as character
 d$Success <- as.character(d$Success)
-d$Success_Ampel <- as.character(d$Success_Ampel)
 d$Delay <- as.character(d$Delay)
 d$Cat_age <- as.character(d$Cat_age)
-d$Loss <- as.character(d$Loss)
 
 #write final data to xlsx
 write.xlsx(d, "03_d_o.xlsx")
-
 
 #make two data sets for further anaylzing
 uBud <- subset(d, DB1BudDev < 0)
@@ -163,14 +151,14 @@ addDataFrame(e_loss, sheet = sheet, row.names = F)
 
 
 
-#calculate loss based on SUCCESS_AMPEL incl. all frame factors
-e_loss_ampel <- aggregate(cbind(TOBud, CostBud, DB1Budabs, TOAct, CostAct, DB1Actabs,
+#calculate loss based on tobudcat incl.
+e_loss_tobudcat <- aggregate(cbind(TOBud, CostBud, DB1Budabs, TOAct, CostAct, DB1Actabs,
                                 TOBudDevabs, CostBudDevabs, DB1BudDevabs,
                                 CostActBudMSabs, CostActBudMEabs,
-                                CostActBudPAabs, CostActBudISabs) ~ Success_Ampel + Region + BA + BU + MS + CuNo,
+                                CostActBudPAabs, CostActBudISabs) ~ Success + TOBud_Cat,
                           data = d, sum)
-sheet = createSheet(wb, sheetName = "ov_loss_ampel")
-addDataFrame(e_loss_ampel, sheet = sheet, row.names = F)
+sheet = createSheet(wb, sheetName = "ov_loss_tobudcat")
+addDataFrame(e_loss_tobudcat, sheet = sheet, row.names = F)
 
 
 
@@ -214,8 +202,8 @@ saveWorkbook(wb, "Evaluation.xlsx")
 nums_d <- sapply(d, is.numeric)
 
 #transform subsets to data long
-uBudl <- melt(uBud[,nums_d], id.vars = "BPMID")
-oBudl <- melt(oBud[,nums_d], id.vars = "BPMID")
+uBudl <- melt(uBud[,nums], id.vars = "BPMID")
+oBudl <- melt(oBud[,nums], id.vars = "BPMID")
 
 for(i in 1:length(nums_d)){
   ks <- ks.test(uBud[,nums_d], oBud[,nums_d])
@@ -246,48 +234,53 @@ write.xlsx(costfcadj, "FF-CostFCadjCombi.xlsx")
 
 
 
-#HOMStatus
-noyellcost <- d$HOMYellCost == 1111111
 
 #histogram for all ff-num
 ggplot(subset(dlong, variable == "HOMRedCost"), aes(x = value, fill = Success)) +
   geom_histogram(alpha = 0.5, position = 'identity', bins = 15) +xlim(min(d$HOMRedCost), 300)
 
-
-#evaluation of PMAge und PMTen
-Cat_age <- cut(d$PMAge2, seq(20,65,5))
-d <- data.frame(d, Cat_age, stringsAsFactors = F)
-Cat_age <- as.character(d$Cat_age)
-
+#evaluate frequency for PMAge, PMTen and Cat_age
 ffpm <- aggregate(cbind(Dummy_Success, Dummy_Fail)~PMAge2 + PMTen2+Cat_age, data=d, sum)
 wb = createWorkbook()
 sheet = createSheet(wb, "ffpm")
 addDataFrame(ffpm, sheet = sheet)
 
-ffpmchange <- aggregate(cbind(Dummy_Success, Dummy_Fail)~PMChange, data = d, sum)
-sheet = createSheet(wb, "ffpmchange")
-addDataFrame(ffpmchange, sheet = sheet)
+#evaluate frequency success and fail per Cat_age
+fage_cat <- aggregate(cbind(Dummy_Success,Dummy_Fail)~Cat_age, data = d, sum)
+sheet = createSheet(wb, "fagecat")
+addDataFrame(fage_cat, sheet = sheet)
 
-ffpmno <- aggregate(cbind(Dummy_Success, Dummy_Fail)~PMNo, data = d, sum)
-sheet = createSheet(wb, "ffpmno")
-addDataFrame(ffpmno, sheet = sheet)
-
-ffnopm <- aggregate(cbind(Dummy_Success, Dummy_Fail)~NoPM, data = d, sum)
-sheet = createSheet(wb, "ffnopm")
-addDataFrame(ffnopm, sheet = sheet)
-
+#calculate mean of PMAge  andPMTen per Success and Fail
 ffpmageten <- aggregate(cbind(PMAge2, PMTen2)~Success, data = d, mean)
 sheet = createSheet(wb, "ffpmageten")
 addDataFrame(ffpmageten, sheet = sheet)
 
+#evaluate frequency for PMChange
+ffpmchange <- aggregate(cbind(Dummy_Success, Dummy_Fail)~PMChange, data = d, sum)
+sheet = createSheet(wb, "ffpmchange")
+addDataFrame(ffpmchange, sheet = sheet)
+
+#evalute frequency for PMNo
+ffpmno <- aggregate(cbind(Dummy_Success, Dummy_Fail)~PMNo, data = d, sum)
+sheet = createSheet(wb, "ffpmno")
+addDataFrame(ffpmno, sheet = sheet)
+
+#evaluate frequency for NoPM
+ffnopm <- aggregate(cbind(Dummy_Success, Dummy_Fail)~NoPM, data = d, sum)
+sheet = createSheet(wb, "ffnopm")
+addDataFrame(ffnopm, sheet = sheet)
+
+#evaluate frequency LeadSASPr
 ffleadsaspr <- aggregate(cbind(Dummy_Success, Dummy_Fail)~LeadSASPr, data = d, sum)
 sheet = createSheet(wb, "ffleadsaspr")
 addDataFrame(ffleadsaspr, sheet = sheet)
 
+#evaluate frequency NoLeadSASFF
 ffleadsasff <- aggregate(cbind(Dummy_Success, Dummy_Fail)~NoLeadSASFF, data = d, sum)
 sheet = createSheet(wb, "ffleadsasff")
 addDataFrame(ffleadsasff, sheet = sheet)
 
+#evaluate frequency LeadSAS.PrFF
 ffleadsasprff <- aggregate(cbind(Dummy_Success, Dummy_Fail)~LeadSAS.PrFF, data = d, sum)
 sheet = createSheet(wb, "ffleadsasprff")
 addDataFrame(ffleadsasprff, sheet = sheet)
@@ -322,9 +315,14 @@ dev.off()
 #ggplot for TOCat
 pdf("cost_hist_TOBud_Cat.pdf")
 plot <- ggplot(d, aes(x = TOBud_Cat, fill = Success))+geom_bar(alpha = 0.5, position = 'identity')+
-  labs(x = "TOBUD_Cat")
+  labs(x = "TOBUD_Cat", y = "Anzahl Projekte")+
+  scale_x_discrete(labels = c("1","2","3","4","5","6","7","8","9","10","11","12"))+
+  theme_bw()+
+  theme(panel.grid = element_blank(), panel.border = element_blank(), axis.line = element_line())
 print(plot)
 dev.off()
+
+#ggplot for 
 
 #calculate mean for successful and not successful projects
 cost_mean_TOBud_cat <- aggregate(cbind(BudMSTot, BudMETot, BudPATot, BudISTot,
@@ -399,18 +397,22 @@ onTimeMS8 <- as.numeric(d$PrTimeDelayMS8>=0)
 onTimeMS10 <- as.numeric(d$PrTimeDelayMS10>=0)
 onTimeMS11 <- as.numeric(d$PrTimeDelayMS11>=0)
 
-#evaluate if a delay is persistent
+#evaluate frequ of delay per ms
 time_delay <- aggregate(cbind(DelayMS2, onTimeMS2, DelayMS8, onTimeMS8,
-                        DelayMS10, onTimeMS10, DelayMS11, onTimeMS11)~Success+Delay, data=d, sum)
+                        DelayMS10, onTimeMS10, DelayMS11, onTimeMS11)~Success, data=d, sum)
+#evaluate freq delay and succes
+time_suc_del <- aggregate(cbind(Dummy_Success,Dummy_Fail)~Delay , data = d, sum)
 
 #evaluate if sukzessiver delay
-time_sukz <- count(d,c("Success","DelayMS2", "DelayMS8", "DelayMS10", "DelayMS11"))
+time_sukz <- count(d,c("Success", "Delay","DelayMS2", "DelayMS8", "DelayMS10", "DelayMS11"))
 
 wb = createWorkbook()
 p = createSheet(wb, "time_mean")
 addDataFrame(time_mean, p)
 p = createSheet(wb, "time_delay")
 addDataFrame(time_delay, p)
+p = createSheet(wb, "time_su_del")
+addDataFrame(time_suc_del, p)
 p = createSheet(wb, "time_sukz")
 addDataFrame(time_sukz, p)
 saveWorkbook(wb, "time.xlsx")
@@ -442,8 +444,8 @@ sq_mean_reg_ba <- aggregate(cbind(BUORBudGapAbs,BUORBudGapRel,RegiORBudGapAbs, R
                      data = d, mean)
 
 wb = createWorkbook()
-p = createSheet(wb, sheetName = sq_mean)
-addDataFrame(sq_mean, "sq_mean")
+p = createSheet(wb, "sq_mean")
+addDataFrame(sq_mean, p)
 
 write.xlsx(sq_mean,"sq.xlsx")
 
@@ -464,10 +466,38 @@ for(i in 1:length(unique(complex))){
 }
 dev.off()
 
+#evalaute freq complexity
 complex <- aggregate(cbind(Dummy_Success,Dummy_Fail)~NoSupplSAS +
-                     NoSupplSASMS+NoSupplSASME+NoSupplSASPA+NoSupplSASIS+NoContr+ConPart, data = d, sum)
+                     NoSupplSASMS+NoSupplSASME+NoSupplSASPA+NoSupplSASIS+NoContr, data = d, sum)
+
+
+#evaluate nosas
+nosas <- aggregate(cbind(Dummy_Success,Dummy_Fail)~NoSupplSAS +
+                       NoSupplSASMS+NoSupplSASME+NoSupplSASPA+NoSupplSASIS, data = d, sum)
+
+#evaluate freq conPart in Region und BA
+cons_reg_ba <- aggregate(cbind(Dummy_Success,Dummy_Fail)~ConPart+Region+BA, data = d, sum)
+#evaluate freq conPart in Reg
+cons_reg <- aggregate(cbind(Dummy_Success,Dummy_Fail)~ConPart+Region, data = d, sum)
+
+#evaluate freq ConPart in BA
+cons_to <- aggregate(cbind(Dummy_Success,Dummy_Fail)~ConPart+TOBud_Cat, data = d, sum)
+
+#evaluate freq NoContr
+nocontr <- aggregate(cbind(Dummy_Success,Dummy_Fail)~NoContr, data = d, sum)
 
 wb = createWorkbook()
-p = createSheet(wb, "con_part")
+p = createSheet(wb, "complexity")
 addDataFrame(complex, p)
+p = createSheet(wb, "nosas")
+addDataFrame(nosas, p)
+p = createSheet(wb, "con_part_reg_ba")
+addDataFrame(cons_reg_ba, p)
+p = createSheet(wb, "con_part_reg")
+addDataFrame(cons_reg, p)
+p = createSheet(wb, "con_part_to")
+addDataFrame(cons_to, p)
+p = createSheet(wb, "nocontr")
+addDataFrame(nocontr, p)
 saveWorkbook(wb, "complex.xlsx")
+

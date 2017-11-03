@@ -22,7 +22,7 @@
 if (!require("pacman")) install.packages("pacman")
 #p_load: wraps library and require into one function, it checks if a package is installed, if not it installs the package
 pacman::p_load("ggplot2", "xlsx", "rJava", "xlsxjars", "reshape", "vars", "MuMIn", "tidyr", "plyr", "gridExtra",
-              "lubridate")
+              "lubridate", "grid")
 
 
 
