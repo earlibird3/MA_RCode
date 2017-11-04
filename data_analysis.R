@@ -123,16 +123,7 @@ addDataFrame(e_freq_reg, sheet = sheet, row.names = F)
 
 
 
-#calculate frequency according SUCCESS_AMPEL
-e_freq_ampel <- aggregate(cbind(Dummy_green,Dummy_yell, Dummy_red) ~ Region + BA + BU + MS + CuNo, d, sum)
-tot_ampe <- as.numeric(e_freq_ampel$Dummy_green + e_freq_ampel$Dummy_yell + e_freq_ampel$Dummy_red)
-e_freq_ampel <- data.frame(e_freq_ampel, Total = tot_ampe,
-                     Success_Per = e_freq_ampel$Dummy_green/tot_ampe,
-                     Fail_Per = (e_freq_ampel$Dummy_yell + e_freq_ampel$Dummy_red)/tot_ampe,
-                     Success_Fail = e_freq_ampel$Dummy_green/(e_freq_ampel$Dummy_yell + e_freq_ampel$Dummy_red))
 
-sheet = createSheet(wb, sheetName = "ov_success_ampel")
-addDataFrame(e_freq_ampel, sheet = sheet, row.names = F)
 
 ###############################################################################
 # =============================================================================
@@ -193,6 +184,8 @@ addDataFrame(e_loss_BA, sheet = sheet, row.names = F)
 #save to excel
 saveWorkbook(wb, "Evaluation.xlsx")
 
+
+
 ###############################################################################
 # =============================================================================
 # K.Test
@@ -216,28 +209,54 @@ for(i in 1:length(nums_d)){
 ###############################################################################
 
 #create vector for all ff variables which are numeric
-ff_num <- c("CostMostnegFCajdMS", "CostMostnegFCajdME", "HOMYellCost", "HOMYellQual", "HOMYellTime",
-            "HOMRedCost", "HOMRedTime", "HOMRedQual", "NoPM", "PMAge2", "PMTen2", "NoLeadSASFF")
+ff_num <- c("CostMostnegFCajdMS", "CostMostnegFCajdME","NoPM", "PMAge2", "PMTen2", "NoLeadSASFF")
 #create vector for all ff variables which are categorical w/o PMNo as this could give a separate analysis
 ff_char <- c("PMChange","LeadSASPr", "LeadSAS.PrFF",
              "CostFCadj", "CostFCadjMS", "CostFCadjME", "CostFCadjPA", "CostFCadjIS")
+ff_hom <- c("HOMYellCost", "HOMYellQual", "HOMYellTime", "HOMRedCost", "HOMRedTime", "HOMRedQual")
+
 
 #create log format of data to iterate through d to crate graphs
 dlong <- melt(d, id.vars = c("BPMID","DB1BudDev", "EquLoc", "PMNo", "PMChange",
                              "BA", "BU", "MS", "Region", "CuNo", "PrStartDate",
                              "LeadSASPr","LeadSAS.PrFF", "ConPart",
-                             "Success", "Success_Ampel", "Delay", "TOBud_Cat"))
+                             "Success", "Delay", "TOBud_Cat"))
+#Analysis of HOM Stauts
+homst <- data.frame(d$HOMYellCost, d$HOMYellQual, d$HOMYellTime, d$HOMRedCost, d$HOMRedQual, d$HOMRedTime)
+homst[homst==1111111] <- NA #set values to NA for calculation purpose
+meanhom <- as.numeric(colMeans(homst, na.rm = T))
+sdhom <- as.numeric(lapply(homst, sd, na.rm = T))
+nahom <- sapply(homst, function(y) sum(length(which(is.na(y)))))
+homst_ou <- data.frame(Mean = meanhom, SD = sdhom, NotAv = nahom, stringsAsFactors = F)
+rownames(homst_ou) <- c("HOMYellCost", "HOMYellQual", "HOMYellTime", "HOMRedCost", "HOMRedQual", "HOMRedTime")
+wb = createWorkbook()
+p = createSheet(wb, "Mean_SD_HOM_Status")
+addDataFrame(homst_ou, sheet = p)
+
+#make table for analyzing
+hom <- data.frame(d$HOMYellCost, d$HOMYellQual, d$HOMYellTime, d$HOMRedCost, d$HOMRedQual, d$HOMRedTime, Success)
+p = createSheet(wb, "HOMdata")
+addDataFrame(hom, p)
+
 
 #test combinations of FC depending on success and Region and BA and write to excel
-costfcadj <- count(d, c("CostFCadjMS", "CostFCadjME", "CostFCadjPA", "CostFCadjIS","Success", "Region", "BA"))
-write.xlsx(costfcadj, "FF-CostFCadjCombi.xlsx")
+costfcadjagg <- aggregate(cbind(Dummy_Success, Dummy_Fail)~CostFCadj+CostFCadjMS+CostFCadjME+CostFCadjPA+
+                            CostFCadjIS, data = d, sum)
+p = createSheet(wb, "CostFCadj")
+addDataFrame(costfcadjagg, sheet = p)
+saveWorkbook(wb, "HOM_Stauts_CostFCAdj.xlsx")
+
+#test combinations of FC depending on success write to excel
+costfcadj <- count(d, c("CostFCadjMS", "CostFCadjME", "CostFCadjPA", "CostFCadjIS","Success"))
+#write.xlsx(costfcadj, "FF-CostFCadjCombi.xlsx")
+
+
 
 
 
 
 #histogram for all ff-num
-ggplot(subset(dlong, variable == "HOMRedCost"), aes(x = value, fill = Success)) +
-  geom_histogram(alpha = 0.5, position = 'identity', bins = 15) +xlim(min(d$HOMRedCost), 300)
+ggplot(subset(dlong, variable == "HOMRedCost"), aes(x = value, fill = Success)) + geom_histogram()
 
 #evaluate frequency for PMAge, PMTen and Cat_age
 ffpm <- aggregate(cbind(Dummy_Success, Dummy_Fail)~PMAge2 + PMTen2+Cat_age, data=d, sum)
